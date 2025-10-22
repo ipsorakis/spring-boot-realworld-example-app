@@ -79,3 +79,7 @@ Use spotless for code format.
 # Help
 
 Please fork and PR to improve the project.
+
+# Additional Resources
+
+For more information about the RealWorld project, visit the [official documentation](https://github.com/gothinkster/realworld).
