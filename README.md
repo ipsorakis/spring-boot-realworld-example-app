@@ -40,7 +40,7 @@ This application implements the RealWorld specification and includes the followi
 
 ## GraphQL Support
 
-Following some DDD principles, REST or GraphQL is just a kind of adapter. The domain layer remains consistent regardless of the interface used. This repository implements both GraphQL and REST simultaneously.
+Following some Domain Driven Design (DDD) principles, REST or GraphQL is just a kind of adapter. The domain layer remains consistent regardless of the interface used. This repository implements both GraphQL and REST simultaneously.
 
 The GraphQL schema is located at [src/main/resources/schema/schema.graphqls](src/main/resources/schema/schema.graphqls) and the visualization looks like below:
 
