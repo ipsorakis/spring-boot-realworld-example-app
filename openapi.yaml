@@ -612,6 +612,7 @@ components:
     Article:
       type: object
       required:
+        - id
         - slug
         - title
         - description
@@ -623,6 +624,9 @@ components:
         - favoritesCount
         - author
       properties:
+        id:
+          type: string
+          description: Unique identifier (UUID)
         slug:
           type: string
         title:
@@ -645,6 +649,8 @@ components:
           type: boolean
         favoritesCount:
           type: integer
+        cursor:
+          $ref: "#/components/schemas/Cursor"
         author:
           $ref: "#/components/schemas/Profile"
 
@@ -720,6 +726,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        cursor:
+          $ref: "#/components/schemas/Cursor"
         author:
           $ref: "#/components/schemas/Profile"
 
@@ -762,6 +770,15 @@ components:
           type: array
           items:
             type: string
+
+    # -- Cursor ---------------------------------------------------------
+    Cursor:
+      type: object
+      description: Cursor used for pagination
+      properties:
+        data:
+          type: string
+          format: date-time
 
     # -- Errors --------------------------------------------------------
     GenericErrorModel:
