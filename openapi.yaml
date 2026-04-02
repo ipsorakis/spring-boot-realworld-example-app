@@ -1,0 +1,795 @@
+openapi: 3.0.3
+info:
+  title: Conduit API
+  description: >-
+    RealWorld (Conduit) backend API built with Spring Boot. Provides endpoints
+    for article management, user authentication, social networking (profiles
+    and follows), comments, favorites, and tags.
+  version: 1.0.0
+  contact:
+    name: RealWorld
+    url: https://github.com/gothinkster/realworld
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /
+    description: Default server
+
+tags:
+  - name: User and Authentication
+    description: Registration, login, and current user operations
+  - name: Profile
+    description: Public profile and follow/unfollow
+  - name: Articles
+    description: CRUD operations for articles, listing, and feed
+  - name: Comments
+    description: Comments on articles
+  - name: Favorites
+    description: Favorite and unfavorite articles
+  - name: Tags
+    description: Available tags
+
+security:
+  - Token: []
+
+paths:
+  # ── Authentication & Users ──────────────────────────────────────────
+  /users:
+    post:
+      tags: [User and Authentication]
+      summary: Register a new user
+      operationId: createUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewUserRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "422":
+          description: Validation error (e.g. duplicate email or username)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericErrorModel"
+
+  /users/login:
+    post:
+      tags: [User and Authentication]
+      summary: Authenticate an existing user
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginUserRequest"
+      responses:
+        "200":
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "422":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericErrorModel"
+
+  /user:
+    get:
+      tags: [User and Authentication]
+      summary: Get the current user
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: Current user returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Unauthorized
+    put:
+      tags: [User and Authentication]
+      summary: Update the current user
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Unauthorized
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericErrorModel"
+
+  # ── Profiles ────────────────────────────────────────────────────────
+  /profiles/{username}:
+    get:
+      tags: [Profile]
+      summary: Get a user profile
+      operationId: getProfileByUsername
+      security:
+        - {}
+        - Token: []
+      parameters:
+        - $ref: "#/components/parameters/username"
+      responses:
+        "200":
+          description: Profile returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "404":
+          description: Profile not found
+
+  /profiles/{username}/follow:
+    post:
+      tags: [Profile]
+      summary: Follow a user
+      operationId: followUserByUsername
+      parameters:
+        - $ref: "#/components/parameters/username"
+      responses:
+        "200":
+          description: Profile of the followed user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Profile not found
+    delete:
+      tags: [Profile]
+      summary: Unfollow a user
+      operationId: unfollowUserByUsername
+      parameters:
+        - $ref: "#/components/parameters/username"
+      responses:
+        "200":
+          description: Profile of the unfollowed user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Profile not found
+
+  # ── Articles ────────────────────────────────────────────────────────
+  /articles:
+    get:
+      tags: [Articles]
+      summary: List articles
+      operationId: getArticles
+      description: >-
+        Returns most recent articles globally. Supports filtering by tag,
+        author, and favorited-by user. Pagination via offset and limit.
+      security:
+        - {}
+        - Token: []
+      parameters:
+        - name: tag
+          in: query
+          description: Filter by tag
+          schema:
+            type: string
+        - name: author
+          in: query
+          description: Filter by author username
+          schema:
+            type: string
+        - name: favorited
+          in: query
+          description: Filter by username who favorited the article
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of articles to return
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          description: Number of articles to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleArticlesResponse"
+    post:
+      tags: [Articles]
+      summary: Create an article
+      operationId: createArticle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewArticleRequest"
+      responses:
+        "200":
+          description: Article created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleArticleResponse"
+        "401":
+          description: Unauthorized
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericErrorModel"
+
+  /articles/feed:
+    get:
+      tags: [Articles]
+      summary: Get articles from followed users
+      operationId: getArticlesFeed
+      description: >-
+        Returns articles created by users the current user follows, ordered
+        by most recent first.
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of articles to return
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          description: Number of articles to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Feed of articles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleArticlesResponse"
+        "401":
+          description: Unauthorized
+
+  /articles/{slug}:
+    get:
+      tags: [Articles]
+      summary: Get an article
+      operationId: getArticle
+      security:
+        - {}
+        - Token: []
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      responses:
+        "200":
+          description: Article returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleArticleResponse"
+        "404":
+          description: Article not found
+    put:
+      tags: [Articles]
+      summary: Update an article
+      operationId: updateArticle
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateArticleRequest"
+      responses:
+        "200":
+          description: Article updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleArticleResponse"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden – not the article author
+        "404":
+          description: Article not found
+    delete:
+      tags: [Articles]
+      summary: Delete an article
+      operationId: deleteArticle
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      responses:
+        "204":
+          description: Article deleted
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden – not the article author
+        "404":
+          description: Article not found
+
+  # ── Comments ────────────────────────────────────────────────────────
+  /articles/{slug}/comments:
+    get:
+      tags: [Comments]
+      summary: Get comments for an article
+      operationId: getArticleComments
+      security:
+        - {}
+        - Token: []
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleCommentsResponse"
+        "404":
+          description: Article not found
+    post:
+      tags: [Comments]
+      summary: Add a comment to an article
+      operationId: createArticleComment
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleCommentResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Article not found
+
+  /articles/{slug}/comments/{id}:
+    delete:
+      tags: [Comments]
+      summary: Delete a comment
+      operationId: deleteArticleComment
+      parameters:
+        - $ref: "#/components/parameters/slug"
+        - name: id
+          in: path
+          required: true
+          description: ID of the comment
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Comment deleted
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden – not the comment author
+        "404":
+          description: Article or comment not found
+
+  # ── Favorites ───────────────────────────────────────────────────────
+  /articles/{slug}/favorite:
+    post:
+      tags: [Favorites]
+      summary: Favorite an article
+      operationId: createArticleFavorite
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      responses:
+        "200":
+          description: Article favorited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleArticleResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Article not found
+    delete:
+      tags: [Favorites]
+      summary: Unfavorite an article
+      operationId: deleteArticleFavorite
+      parameters:
+        - $ref: "#/components/parameters/slug"
+      responses:
+        "200":
+          description: Article unfavorited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleArticleResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Article not found
+
+  # ── Tags ────────────────────────────────────────────────────────────
+  /tags:
+    get:
+      tags: [Tags]
+      summary: Get all tags
+      operationId: getTags
+      security: []
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagsResponse"
+
+# ══════════════════════════════════════════════════════════════════════
+components:
+  # ── Security ────────────────────────────────────────────────────────
+  securitySchemes:
+    Token:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: >-
+        JWT token prefixed with "Token ", e.g. `Token jwt.token.here`
+
+  # ── Reusable Parameters ─────────────────────────────────────────────
+  parameters:
+    slug:
+      name: slug
+      in: path
+      required: true
+      description: Slug of the article
+      schema:
+        type: string
+    username:
+      name: username
+      in: path
+      required: true
+      description: Username of the profile
+      schema:
+        type: string
+
+  # ── Schemas ─────────────────────────────────────────────────────────
+  schemas:
+    # -- User ----------------------------------------------------------
+    User:
+      type: object
+      required: [email, username, token]
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        token:
+          type: string
+
+    UserResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    NewUser:
+      type: object
+      required: [email, username, password]
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    NewUserRequest:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/NewUser"
+
+    LoginUser:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginUserRequest:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/LoginUser"
+
+    UpdateUser:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        bio:
+          type: string
+        image:
+          type: string
+
+    UpdateUserRequest:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/UpdateUser"
+
+    # -- Profile -------------------------------------------------------
+    Profile:
+      type: object
+      required: [username, following]
+      properties:
+        username:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        following:
+          type: boolean
+
+    ProfileResponse:
+      type: object
+      required: [profile]
+      properties:
+        profile:
+          $ref: "#/components/schemas/Profile"
+
+    # -- Article -------------------------------------------------------
+    Article:
+      type: object
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - body
+        - tagList
+        - createdAt
+        - updatedAt
+        - favorited
+        - favoritesCount
+        - author
+      properties:
+        id:
+          type: string
+          description: Unique identifier (UUID)
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+        tagList:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        favorited:
+          type: boolean
+        favoritesCount:
+          type: integer
+        cursor:
+          $ref: "#/components/schemas/Cursor"
+        author:
+          $ref: "#/components/schemas/Profile"
+
+    SingleArticleResponse:
+      type: object
+      required: [article]
+      properties:
+        article:
+          $ref: "#/components/schemas/Article"
+
+    MultipleArticlesResponse:
+      type: object
+      required: [articles, articlesCount]
+      properties:
+        articles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        articlesCount:
+          type: integer
+
+    NewArticle:
+      type: object
+      required: [title, description, body]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+        tagList:
+          type: array
+          items:
+            type: string
+
+    NewArticleRequest:
+      type: object
+      required: [article]
+      properties:
+        article:
+          $ref: "#/components/schemas/NewArticle"
+
+    UpdateArticle:
+      type: object
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        description:
+          type: string
+
+    UpdateArticleRequest:
+      type: object
+      required: [article]
+      properties:
+        article:
+          $ref: "#/components/schemas/UpdateArticle"
+
+    # -- Comment -------------------------------------------------------
+    Comment:
+      type: object
+      required: [id, body, createdAt, updatedAt, author]
+      properties:
+        id:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        cursor:
+          $ref: "#/components/schemas/Cursor"
+        author:
+          $ref: "#/components/schemas/Profile"
+
+    SingleCommentResponse:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          $ref: "#/components/schemas/Comment"
+
+    MultipleCommentsResponse:
+      type: object
+      required: [comments]
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+
+    NewComment:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+
+    NewCommentRequest:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          $ref: "#/components/schemas/NewComment"
+
+    # -- Tags ----------------------------------------------------------
+    TagsResponse:
+      type: object
+      required: [tags]
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+
+    # -- Cursor ---------------------------------------------------------
+    Cursor:
+      type: object
+      description: Cursor used for pagination
+      properties:
+        data:
+          type: string
+          format: date-time
+
+    # -- Errors --------------------------------------------------------
+    GenericErrorModel:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: object
+          required: [body]
+          properties:
+            body:
+              type: array
+              items:
+                type: string
